@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends
+from fastapi.middleware.cors import CORSMiddleware  # <-- 1. Idinagdag na Import para sa Front-end
 from app.database.db import engine, Base
 from fastapi.security import OAuth2PasswordBearer
 from typing import Annotated
@@ -24,7 +25,6 @@ from app.controllers import (
 Base.metadata.create_all(bind=engine)
 
 # 4. SECURITY CONFIG (Ito ang "Susi" para lumabas ang Lock Icon)
-# Ang 'tokenUrl' ay dapat tumuturo sa exact path ng login function mo mamaya
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
 # 5. INITIALIZE APP WITH SECURITY SCHEME
@@ -32,11 +32,28 @@ app = FastAPI(
     title="CSR Provincial System API",
     description="Full CRUD System for Tawi-Tawi Management",
     version="1.0.0",
-    # Dito natin idedeklara ang security requirements globally
     swagger_ui_parameters={"deepLinking": True}
 )
 
-# 6. REGISTER ROUTERS (Inalis ko ang redundant /auth sa prefix)
+# --- 2. DITO ISININGIT ANG CORS MIDDLEWARE CONFIGURATION ---
+# Pinapayagan natin ang front-end na kumonekta kahit magkaiba kayo ng port o kahit galing sa phone emulator
+origins = [
+    "http://localhost:3000",      # Kung React/Vue/Next.js ang gamit sa web
+    "http://localhost:8080",      # Iba pang web servers
+    "http://127.0.0.1:3000",
+    "*",                          # Ang "*" ay "Allow All" - Napaka-importante para sa Flutter Mobile Apps!
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],          # Pinapayagan ang GET, POST, PUT, DELETE, etc.
+    allow_headers=["*"],          # Pinapayagan ang Authorization headers at Tokens
+)
+# ----------------------------------------------------------
+
+# 6. REGISTER ROUTERS
 app.include_router(auth_controller.router, prefix="/auth", tags=["Authentication"])
 app.include_router(citizen_controller.router, prefix="/citizen", tags=["Citizen Services"])
 app.include_router(barangay_controller.router, prefix="/barangay", tags=["Barangay Level"])
